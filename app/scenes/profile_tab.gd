@@ -100,11 +100,10 @@ func _card(rider: Dictionary, active: bool) -> PanelContainer:
 	line.add_child(titles)
 	if active:
 		var chip: PanelContainer = PanelContainer.new()
-		chip.add_theme_stylebox_override("panel", UiTheme.chip(true))
+		chip.add_theme_stylebox_override("panel", UiTheme.button_chip())
 		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var chip_label: Label = Label.new()
 		chip_label.text = tr("Active")
-		chip_label.add_theme_font_size_override("font_size", 12)
 		chip.add_child(chip_label)
 		line.add_child(chip)
 	else:
