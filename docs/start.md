@@ -10,8 +10,9 @@ Torqa opens on the start page with five tabs:
   profile with its climbs, your best times there, the ride options (camera, difficulty,
   descents, time of day, weather), who to race ([ghosts.md](ghosts.md)) and **Ride**. The 3D
   world is built when you press **Ride**, so looking around the library stays quick.
-  **Rename** and **Delete course** are on the course page; deleting keeps your rides on it.
-  **Add video…** there rides the course along a video of it ([video.md](video.md)).
+  On the course page, the pencil beside the name opens **Edit course**: rename it, or add a
+  video to ride it along ([video.md](video.md)). The bin beside it (**Delete course**) removes
+  the course after asking; your rides on it are kept.
 - **Workouts** — hold a power, or a heart rate that Torqa holds for you by setting the power,
   on its own or on a course in 3D ([workouts.md](workouts.md)).
 - **History** — your rides ([history.md](history.md)).

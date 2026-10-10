@@ -54,6 +54,13 @@ func _run() -> void:
 	await create_timer(1.0).timeout
 	root.get_texture().get_image().save_png(out_dir.path_join("course-detail.png"))
 	print("saved course detail")
+	# The pencil beside the course's name: its name and video.
+	var course_page: CourseDetail = start.find_children("*", "CourseDetail", true, false)[0]
+	course_page.call("_open_editor")
+	await create_timer(0.5).timeout
+	root.get_texture().get_image().save_png(out_dir.path_join("course-edit.png"))
+	var edit_dialog: Window = course_page.get("_edit_dialog")
+	edit_dialog.hide()
 	# Let the world stream its chunks in.
 	for i: int in range(240):
 		await process_frame

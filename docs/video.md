@@ -31,20 +31,24 @@ added to your library, marked **Video** on its card.
 A video without GPS cannot tell where it was filmed, so it is added to a course:
 
 1. Import the **GPX route** of the ride shown in the video (Courses tab).
-2. Open that course and press **Add video…**, then choose the video.
+2. Open that course, press the pencil beside its name, then **Add video…**, and choose the
+   video.
 3. **Align video with route** opens with two **sync points**: the route's **start** and
    **end**. Select one and set the moment of the video showing that place, with the slider
    and the ±1 s / ±0.1 s buttons, checking the frame above.
 4. Where the footage stops or changes speed (a traffic light, a steep climb), **Add point**:
    set its place on the route (shown on the elevation profile) and its moment in the video.
 
-The course is now ridden along the video. Between neighbouring points the video follows your
-distance evenly; the GPX's own timestamps are not used (they come from another recording).
-**Align video…** changes the points later; the course file keeps the change.
+5. **Save** in **Edit course**: the course is now ridden along the video.
 
-**Remove video** on any video course's page takes the video off: the course is then ridden
-in 3D only. Courses made from a video with GPS follow their GPS and have
-nothing to align.
+Between neighbouring points the video follows your distance evenly; the GPX's own timestamps
+are not used (they come from another recording). **Align video…** in **Edit course** changes
+the points later; the course file keeps the change on **Save**.
+
+**Remove video** in any video course's **Edit course** takes the video off on **Save**: the
+course is then ridden in 3D only. Courses made from a video with GPS follow their GPS and
+have nothing to align; Tacx RLV courses keep their video. Nothing changes until **Save**, so
+**Cancel** leaves the course as it was.
 
 ## Riding a video course
 

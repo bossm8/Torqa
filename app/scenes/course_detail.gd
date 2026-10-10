@@ -1,8 +1,10 @@
 class_name CourseDetail
 extends HBoxContainer
-## One course (R40): name (renamable), key figures, path card, elevation profile with climbs and
-## the rider's records on it, next to the ride options (R48) and who to race (R20) → Ride.
-## Opening the page loads only the route; the 3D world is built once Ride is pressed.
+## One course (R40): name, key figures, path card, elevation profile with climbs and the
+## rider's records on it, next to the ride options (R48) and who to race (R20) → Ride. The
+## pencil beside the name renames the course and adds, aligns or removes its video (R17); the
+## bin beside it deletes the course. Opening the page loads only the route; the 3D world is
+## built once Ride is pressed.
 
 signal back_requested
 ## Ride was pressed with `options` (`RideOptions.options()`) against `ghost` (`GhostPicker`).
@@ -18,7 +20,7 @@ var _path: String = ""
 ## Waiting for this course's route, or for its world after Ride.
 var _loading_route: bool = false
 var _building: bool = false
-var _title: EditableTitle = EditableTitle.new(tr("Rename the course"))
+var _title: EditableTitle = EditableTitle.new(tr("Edit the course's name and video"), false)
 var _figures: VBoxContainer = VBoxContainer.new()
 var _path_card: PathCard = PathCard.new()
 var _profile: ElevationProfile = ElevationProfile.new()
@@ -28,16 +30,9 @@ var _ghost: GhostPicker = GhostPicker.new()
 var _ride_button: Button = Button.new()
 var _loading_bar: ProgressBar = ProgressBar.new()
 var _status: Label = Label.new()
+var _delete_button: Button = Button.new()
 var _confirm_delete: ConfirmationDialog = ConfirmationDialog.new()
-## Videos on GPX courses (R17): add one (e.g. without GPS), move where the route starts and
-## ends in it, or take it off again.
-var _add_video_button: Button = Button.new()
-var _align_button: Button = Button.new()
-var _remove_video_button: Button = Button.new()
-var _video_dialog: FileDialog = FileDialog.new()
-var _align_dialog: VideoAlignDialog = VideoAlignDialog.new()
-## The video being added, while its alignment is set; empty when moving the marks.
-var _adding_video: String = ""
+var _edit_dialog: CourseEditDialog = CourseEditDialog.new()
 ## Courses with a video are ridden along it or in 3D, as chosen when riding (#44).
 var _view_dialog: AcceptDialog = AcceptDialog.new()
 var _along_video: bool = false
@@ -70,8 +65,6 @@ func open(course: Dictionary) -> void:
 	var rider: Dictionary = _torqa.profile()
 	var difficulty: float = rider.get("default_difficulty_pct", 50.0)
 	_options.set_difficulty(difficulty)
-	for button: Button in [_add_video_button, _align_button, _remove_video_button]:
-		button.hide()
 	_loading_bar.hide()
 	_ride_button.disabled = true
 	_loading_route = true
@@ -120,26 +113,15 @@ func _init() -> void:
 	back.text = tr("← Courses")
 	back.pressed.connect(func() -> void: back_requested.emit())
 	top.add_child(back)
-	var push: Control = Control.new()
-	push.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(push)
-	var delete: Button = Button.new()
-	_add_video_button.text = tr("Add video…")
-	_add_video_button.tooltip_text = tr("Ride this course along a video of it")
-	_add_video_button.pressed.connect(func() -> void: _video_dialog.popup_centered_ratio(0.7))
-	_align_button.text = tr("Align video…")
-	_align_button.pressed.connect(_open_alignment)
-	_remove_video_button.text = tr("Remove video")
-	_remove_video_button.pressed.connect(_remove_video)
-	for button: Button in [_add_video_button, _align_button, _remove_video_button]:
-		button.hide()
-		top.add_child(button)
-	delete.text = tr("Delete course")
-	delete.pressed.connect(_confirm_delete.popup_centered)
-	UiTheme.danger_button(delete)
-	top.add_child(delete)
 	left.add_child(top)
-	_title.edit_finished.connect(_rename)
+	_title.edit_requested.connect(_open_editor)
+	_delete_button.icon = UiIcons.texture("bin")
+	_delete_button.tooltip_text = tr("Delete course")
+	_delete_button.focus_mode = Control.FOCUS_NONE
+	_delete_button.pressed.connect(_confirm_delete.popup_centered)
+	UiTheme.danger_button(_delete_button)
+	# Beside the pencil, as on a ride in the history (#190).
+	_title.add_action(_delete_button)
 	left.add_child(_title)
 	var overview: HBoxContainer = HBoxContainer.new()
 	overview.add_theme_constant_override("separation", 24)
@@ -197,19 +179,11 @@ func _init() -> void:
 	_view_dialog.confirmed.connect(func() -> void: _ride(true))
 	_view_dialog.custom_action.connect(_on_view_action)
 	add_child(_view_dialog)
-	_align_dialog.aligned.connect(_on_aligned)
-	add_child(_align_dialog)
-	_video_dialog.title = tr("Choose a video of this course")
-	_video_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-	_video_dialog.access = FileDialog.ACCESS_FILESYSTEM
-	var videos: PackedStringArray = PackedStringArray()
-	for extension: String in TorqaApp.video_extensions():
-		if not extension in ["xml", "rlv"]:
-			videos.append("*." + extension)
-	_video_dialog.filters = PackedStringArray([", ".join(videos) + " ; " + tr("Videos")])
-	_video_dialog.use_native_dialog = true
-	_video_dialog.file_selected.connect(_on_video_chosen)
-	add_child(_video_dialog)
+	_edit_dialog.course_renamed.connect(_rename)
+	_edit_dialog.video_removed.connect(_remove_video)
+	_edit_dialog.video_added.connect(_add_video)
+	_edit_dialog.video_aligned.connect(_align_video)
+	add_child(_edit_dialog)
 
 
 func _show_figures() -> void:
@@ -220,11 +194,16 @@ func _show_figures() -> void:
 	_figures.add_child(CourseCard.figure_rows(_course, imperial))
 
 
-func _rename() -> void:
-	var old_name: String = _course.get("name", "")
-	var new_name: String = _title.text.strip_edges()
-	if new_name.is_empty() or new_name == old_name or not _torqa.rename_course(_path, new_name):
-		_title.text = old_name
+## The video is known once the route is loaded; until then only the name can change.
+func _open_editor() -> void:
+	var loaded: bool = not _loading_route and _torqa.loaded_course() == _path and _torqa.has_route()
+	var video: Dictionary = _torqa.video() if loaded else {}
+	var course_name: String = _course.get("name", "")
+	_edit_dialog.edit(_torqa, course_name, video, loaded)
+
+
+func _rename(new_name: String) -> void:
+	if not _torqa.rename_course(_path, new_name):
 		return
 	_course["name"] = new_name
 	_title.text = new_name
@@ -247,7 +226,7 @@ func _on_route_loaded(_route: Dictionary) -> void:
 func _show_route() -> void:
 	_loading_route = false
 	_ride_button.disabled = false
-	_show_video_buttons()
+	_show_option_groups()
 	var climbs: Dictionary = _torqa.climbs()
 	var climb_list: Array = climbs.get("climbs", [])
 	_profile.set_climbs(climb_list)
@@ -308,15 +287,12 @@ func _on_failed(message: String) -> void:
 		_status.text = message
 
 
-func _show_video_buttons() -> void:
+func _show_option_groups() -> void:
 	var video: Dictionary = _torqa.video()
 	# A video course is ridden either way, unless it has no place (Tacx RLV): then only along
-	# its video, which it keeps.
+	# its video.
 	var located: bool = video.get("located", true)
 	_options.show_option_groups(located, not video.is_empty())
-	_add_video_button.visible = video.is_empty()
-	_align_button.visible = video.get("aligned_by_hand", false)
-	_remove_video_button.visible = not video.is_empty() and located
 
 
 func _on_ride_pressed() -> void:
@@ -340,48 +316,21 @@ func _ride(along_video: bool) -> void:
 	ride_requested.emit(_options.options(), _ghost.choice())
 
 
-func _on_video_chosen(path: String) -> void:
-	var probe: Dictionary = _torqa.video_probe(path)
-	if probe.is_empty():
-		return
-	_adding_video = path
-	var duration_s: float = probe["duration_s"]
-	_edit_alignment(path, duration_s, PackedVector2Array())
-
-
-func _open_alignment() -> void:
-	var video: Dictionary = _torqa.video()
-	if video.is_empty():
-		return
-	_adding_video = ""
-	var path: String = video["path"]
-	var duration_s: float = video["duration_s"]
-	var marks: PackedVector2Array = video["marks"]
-	_edit_alignment(path, duration_s, marks)
-
-
-func _edit_alignment(path: String, duration_s: float, marks: PackedVector2Array) -> void:
-	var profile: PackedVector2Array = _torqa.elevation_profile(600)
-	var length_m: float = profile[profile.size() - 1].x if not profile.is_empty() else 0.0
-	var imperial: bool = _torqa.profile().get("units", "metric") == "imperial"
-	_align_dialog.edit(_torqa, path, duration_s, length_m, profile, marks, imperial)
-
-
-func _on_aligned(marks: PackedVector2Array) -> void:
-	if _adding_video.is_empty():
-		if _torqa.align_video(marks):
-			_status.text = tr("Video aligned with the route.")
-		return
-	if _torqa.add_video(_adding_video, marks):
+func _add_video(video: String, marks: PackedVector2Array) -> void:
+	if _torqa.add_video(video, marks):
 		_status.text = tr("Video added: this course is ridden along it now.")
-		_show_video_buttons()
+		_show_option_groups()
 		course_changed.emit()
-	_adding_video = ""
+
+
+func _align_video(marks: PackedVector2Array) -> void:
+	if _torqa.align_video(marks):
+		_status.text = tr("Video aligned with the route.")
 
 
 ## Back to riding the course in 3D only.
 func _remove_video() -> void:
 	if _torqa.remove_video():
 		_status.text = tr("Video removed: this course is ridden in 3D.")
-		_show_video_buttons()
+		_show_option_groups()
 		course_changed.emit()
