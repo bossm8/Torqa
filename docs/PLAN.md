@@ -189,6 +189,7 @@ Built in rideable steps:
   one button or key S; finish & save or abort without saving after a confirmation (R48–R49)
 - [x] The same ride options on the course detail page (R48, with the start page)
 - [x] Ride names: default course + date, set on the summary, rename in history (R50)
+- [x] Export a ride's FIT file from the history or summary to a place the rider picks (R28)
 - [ ] UI design system (sleek minimal) applied to all screens and dialogs, polished course
   summaries; no text bloat on course load, dialogs that reflow when resized (R52–R53)
 - **Exit:** start the app, pick a course from the gallery, ride it, see the summary, land back home

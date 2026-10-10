@@ -602,6 +602,22 @@ impl TorqaApp {
         self.command(|app| app.delete_ride(&path))
     }
 
+    /// Saves a copy of a ride's FIT file at `to`; emits `failed` on errors.
+    #[func]
+    #[allow(clippy::needless_pass_by_value)] // #[func] parameters are passed by value from Godot
+    fn export_ride(&mut self, path: GString, to: GString) -> bool {
+        let path = PathBuf::from(path.to_string());
+        let to = PathBuf::from(to.to_string());
+        self.command(|app| app.export_ride(&path, &to))
+    }
+
+    /// The file name to suggest when exporting the ride titled `title`.
+    #[func]
+    #[allow(clippy::needless_pass_by_value)] // #[func] parameters are passed by value from Godot
+    fn ride_export_file_name(title: GString) -> GString {
+        GString::from(App::ride_export_file_name(&title.to_string()).as_str())
+    }
+
     /// The graphics presets, lightest first: `low`, `medium`, `high`, `ultra` (R43).
     #[func]
     fn graphics_qualities() -> PackedStringArray {
