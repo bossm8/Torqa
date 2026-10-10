@@ -2082,6 +2082,22 @@ impl App {
         Ok(())
     }
 
+    /// Saves a copy of a ride's FIT file at `to`, a place the rider chose outside the data
+    /// directory (R28).
+    ///
+    /// # Errors
+    /// [`AppError::Storage`] if the FIT file cannot be read or the copy not written.
+    pub fn export_ride(&self, fit: &Path, to: &Path) -> Result<(), AppError> {
+        rides::export(fit, to)
+            .map_err(|e| AppError::Storage(format!("cannot export to {}: {e}", to.display())))
+    }
+
+    /// The file name to suggest when exporting the ride titled `title` (R50).
+    #[must_use]
+    pub fn ride_export_file_name(title: &str) -> String {
+        rides::export_file_name(title)
+    }
+
     fn rides_dir(&self) -> PathBuf {
         profiles::rides_dir(&self.data_dir, &self.profile.id)
     }

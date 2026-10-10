@@ -1,8 +1,9 @@
 class_name HistoryScreen
 extends Control
 ## The rider's past rides (R31): a list on the left, the selected ride's figures, chart and
-## time in zones on the right. Rides have names (R50), edited in place. Right after a ride the
-## same screen is its summary (R42): that ride only, to name, keep or discard.
+## time in zones on the right. Rides have names (R50), edited in place, and their FIT files can
+## be saved anywhere on the computer (R28). Right after a ride the same screen is its summary
+## (R42): that ride only, to name, keep or discard.
 
 signal closed
 
@@ -43,10 +44,16 @@ var _chart: RideChart = RideChart.new()
 var _power_zones: ZoneBars = ZoneBars.new()
 var _heart_rate_zones: ZoneBars = ZoneBars.new()
 var _delete_button: Button = Button.new()
+## Saving the ride's FIT file somewhere outside the data directory (R28).
+var _export_button: Button = Button.new()
+var _export_dialog: FileDialog = FileDialog.new()
+var _export_status: Label = Label.new()
+var _exporting: bool = false
 
 
 func bind(torqa: TorqaApp) -> void:
 	_torqa = torqa
+	_torqa.failed.connect(_on_failed)
 
 
 ## The summary of the ride just saved in `path` (R42): only that ride, to name, keep or
@@ -139,7 +146,27 @@ func _ready() -> void:
 	titles.add_child(_title)
 	_subtitle.add_theme_color_override("font_color", UiTheme.MUTED)
 	titles.add_child(_subtitle)
+	# Shows a file path.
+	_export_status.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_export_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_export_status.add_theme_color_override("font_color", UiTheme.MUTED)
+	_export_status.hide()
+	titles.add_child(_export_status)
 	title_row.add_child(titles)
+	_export_button.icon = UiIcons.texture("download")
+	_export_button.tooltip_text = tr("Export FIT file")
+	_export_button.focus_mode = Control.FOCUS_NONE
+	_export_button.pressed.connect(_choose_export)
+	_title.add_action(_export_button)
+	_export_dialog.title = tr("Export the ride as a FIT file")
+	_export_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
+	_export_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	# Not the working directory: that is the disk's root for an app started from the Finder.
+	_export_dialog.current_dir = OS.get_system_dir(OS.SYSTEM_DIR_DOWNLOADS)
+	_export_dialog.filters = PackedStringArray(["*.fit ; " + tr("FIT activities")])
+	_export_dialog.use_native_dialog = true
+	_export_dialog.file_selected.connect(_export)
+	add_child(_export_dialog)
 	_delete_button.icon = UiIcons.texture("bin")
 	_delete_button.tooltip_text = tr("Delete ride")
 	_delete_button.focus_mode = Control.FOCUS_NONE
@@ -241,6 +268,7 @@ func _show_ride(index: int) -> void:
 	_title.placeholder_text = _default_name(ride)
 	_title.text = ride_name
 	_subtitle.text = _date(start)
+	_export_status.hide()
 	_fill_stats(ride)
 	_fill_climbs(ride)
 	_show_ftp(ride)
@@ -389,6 +417,37 @@ func _on_delete_confirmed() -> void:
 			_close()
 		else:
 			_load()
+
+
+## Asks where to save the ride's FIT file (R28), suggesting its name as the file name (R50).
+func _choose_export() -> void:
+	if _selected < 0:
+		return
+	# A name still being typed is the one to export under.
+	_rename()
+	var ride: Dictionary = _rides[_selected]
+	var ride_name: String = ride["name"]
+	var title: String = ride_name if not ride_name.is_empty() else _default_name(ride)
+	_export_dialog.current_file = TorqaApp.ride_export_file_name(title)
+	_export_dialog.popup_centered_ratio(0.7)
+
+
+func _export(to: String) -> void:
+	if _selected < 0:
+		return
+	var ride: Dictionary = _rides[_selected]
+	var path: String = ride["path"]
+	_exporting = true
+	if _torqa.export_ride(path, to):
+		_export_status.text = tr("Saved as %s") % to
+		_export_status.show()
+	_exporting = false
+
+
+func _on_failed(message: String) -> void:
+	if _exporting:
+		_export_status.text = message
+		_export_status.show()
 
 
 ## Saves the name typed into the title (R50); an empty name shows route and date again.

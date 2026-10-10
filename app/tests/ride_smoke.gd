@@ -60,6 +60,19 @@ func _run() -> void:
 	var renamed: Dictionary = _torqa.history()[0]
 	var renamed_name: String = renamed["name"]
 	_check(renamed_name == "Smoke spin", "name kept: %s" % renamed)
+	# Exported under its name to a place outside the data directory (R28, R50).
+	var file_name: String = TorqaApp.ride_export_file_name(renamed_name)
+	_check(file_name == "Smoke spin.fit", "exported under its name: %s" % file_name)
+	var exported: String = OS.get_user_data_dir().path_join(file_name)
+	_check(_torqa.export_ride(newest_path, exported), "ride exported")
+	_check(
+		FileAccess.get_file_as_bytes(exported) == FileAccess.get_file_as_bytes(newest_path),
+		"the export is the ride's FIT file"
+	)
+	DirAccess.remove_absolute(exported)
+	_check(not _torqa.export_ride(newest_path, "/nonexistent/x.fit"), "a failed export is told")
+	_check(not _failure.is_empty(), "with the reason")
+	_failure = ""
 	var detail: Dictionary = _torqa.ride_detail(newest_path, 100)
 	var power_chart: PackedVector2Array = detail.get("power", PackedVector2Array())
 	_check(not power_chart.is_empty(), "power chart: %s" % detail)

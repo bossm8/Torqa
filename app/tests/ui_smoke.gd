@@ -605,7 +605,8 @@ func _ride_bar() -> void:
 	bar.free()
 
 
-## The rename and delete controls of a ride are icons with tooltips (#190).
+## The rename, export and delete controls of a ride are icons with tooltips (#190); export
+## asks where to save the FIT file on the computer (R28).
 func _summary_icons() -> void:
 	var title: EditableTitle = EditableTitle.new("Rename it")
 	root.add_child(title)
@@ -618,6 +619,19 @@ func _summary_icons() -> void:
 	var history: Control = main.get_node("HistoryScreen")
 	var bin: Button = history.get("_delete_button")
 	_check(bin.icon != null and not bin.tooltip_text.is_empty(), "a bin to delete, with a tooltip")
+	var export_button: Button = history.get("_export_button")
+	_check(
+		export_button.icon != null and not export_button.tooltip_text.is_empty(),
+		"export, with a tooltip"
+	)
+	var dialog: FileDialog = history.get("_export_dialog")
+	_check(
+		(
+			dialog.file_mode == FileDialog.FILE_MODE_SAVE_FILE
+			and dialog.access == FileDialog.ACCESS_FILESYSTEM
+		),
+		"export saves anywhere on the computer"
+	)
 	main.free()
 
 

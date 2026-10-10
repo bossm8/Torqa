@@ -1197,3 +1197,15 @@ msgstr "Als dieser Fahrer fahren"
 
 msgid "Active"
 msgstr "Aktiv"
+
+msgid "Export FIT file"
+msgstr "FIT-Datei exportieren"
+
+msgid "Export the ride as a FIT file"
+msgstr "Fahrt als FIT-Datei exportieren"
+
+msgid "FIT activities"
+msgstr "FIT-Aktivitäten"
+
+msgid "Saved as %s"
+msgstr "Gespeichert als %s"
