@@ -625,6 +625,8 @@ func _summary_icons() -> void:
 ## with a way to use them, each unfolding to the whole setup in two columns.
 func _profile_icons() -> void:
 	var tab: ProfileTab = ProfileTab.new()
+	# The app's theme, for the sizes the cards really get.
+	tab.theme = UiTheme.build()
 	root.add_child(tab)
 	var badge: PanelContainer = UiTheme.initial("  david ")
 	_check((badge.get_child(0) as Label).text == "D", "the rider's initial")
@@ -645,13 +647,26 @@ func _profile_icons() -> void:
 	var cards: VBoxContainer = tab.get("_cards")
 	_check(cards.get_child_count() == 2, "a card per rider")
 	var texts: Array[String] = []
+	var mark: Control = null
 	for label: Node in cards.find_children("*", "Label", true, false):
 		texts.append((label as Label).text)
+		if (label as Label).text == "Active":
+			mark = label.get_parent()
 	_check("Active" in texts and "Ann" in texts, "the active rider is marked: %s" % [texts])
 	var buttons: Array[String] = []
+	var use: Button = null
 	for button: Node in cards.find_children("*", "Button", true, false):
 		buttons.append((button as Button).text)
+		if (button as Button).text == "Use":
+			use = button
 	_check(buttons.count("Use") == 1, "the other rider can be used: %s" % [buttons])
+	if mark != null and use != null:
+		var mark_height: float = mark.get_combined_minimum_size().y
+		var use_height: float = use.get_combined_minimum_size().y
+		_check(
+			is_equal_approx(mark_height, use_height),
+			"the active mark is as tall as Use: %s vs %s" % [mark_height, use_height]
+		)
 	_check(cards.find_children("*", "GridContainer", true, false).is_empty(), "folded at first")
 	var unfolded: Dictionary = tab.get("_unfolded")
 	unfolded["ann"] = true
