@@ -629,6 +629,7 @@ func _summary_icons() -> void:
 	var history: Control = main.get_node("HistoryScreen")
 	var bin: Button = history.get("_delete_button")
 	_check(bin.icon != null and not bin.tooltip_text.is_empty(), "a bin to delete, with a tooltip")
+	_check(_red(bin), "the bin is red")
 	var export_button: Button = history.get("_export_button")
 	_check(
 		export_button.icon != null and not export_button.tooltip_text.is_empty(),
@@ -723,12 +724,14 @@ func _profile_icons() -> void:
 	)
 	var bins: Array[Button] = _bins(cards)
 	_check(bins.size() == 2 and not bins[0].disabled, "a bin on every card")
+	_check(_red(bins[0]), "the bin is red")
 	bins[0].pressed.emit()
 	var confirm: ConfirmationDialog = tab.get("_confirm_delete")
 	_check(
 		confirm.visible and "Ann" in confirm.dialog_text,
 		"deleting a rider asks first: %s" % confirm.dialog_text
 	)
+	_check(_red(confirm.get_ok_button()), "the confirming Delete is red")
 	confirm.hide()
 	tab.call("_show_riders", [bob], "bob")
 	bins = _bins(cards)
@@ -742,6 +745,12 @@ func _bins(cards: Node) -> Array[Button]:
 		if (button as Button).icon == UiIcons.texture("bin"):
 			bins.append(button)
 	return bins
+
+
+## Whether `button` is drawn in the colour of deleting things.
+func _red(button: Button) -> bool:
+	var box: StyleBoxFlat = button.get_theme_stylebox("normal") as StyleBoxFlat
+	return box != null and Color(box.bg_color, 1.0).is_equal_approx(UiTheme.DANGER)
 
 
 ## A course's card shows its map under the route once it has one (#192).

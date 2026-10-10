@@ -171,12 +171,14 @@ func _ready() -> void:
 	_delete_button.tooltip_text = tr("Delete ride")
 	_delete_button.focus_mode = Control.FOCUS_NONE
 	_delete_button.pressed.connect(_confirm_delete.popup_centered)
+	UiTheme.danger_button(_delete_button)
 	# Beside the pencil, on the title's line, so the two align.
 	_title.add_action(_delete_button)
 	_detail.add_child(title_row)
 	_confirm_delete.title = tr("Delete ride?")
 	_confirm_delete.dialog_text = tr("The ride and its FIT file are deleted.")
 	_confirm_delete.ok_button_text = tr("Delete")
+	UiTheme.danger_button(_confirm_delete.get_ok_button())
 	_confirm_delete.confirmed.connect(_on_delete_confirmed)
 	add_child(_confirm_delete)
 
@@ -239,6 +241,7 @@ func _ready() -> void:
 	var discard: Button = Button.new()
 	discard.text = tr("Discard ride")
 	discard.pressed.connect(_confirm_delete.popup_centered)
+	UiTheme.danger_button(discard)
 	_actions.add_child(discard)
 	var done: Button = Button.new()
 	done.text = tr("Done")
