@@ -235,6 +235,45 @@ pub fn load(fit: &Path) -> Result<RideRecord, RideError> {
     Ok(serde_json::from_str::<RideFile>(&text)?.into())
 }
 
+/// Copies the ride stored in `fit` to `to`, e.g. to upload it by hand (R28). The copy goes to
+/// a `.part` file beside `to` and is moved into place, so a failed export leaves no partial
+/// file, keeps a file it would have replaced, and choosing the ride's own file cannot
+/// truncate it.
+///
+/// # Errors
+/// On file system errors.
+pub fn export(fit: &Path, to: &Path) -> Result<(), RideError> {
+    let mut partial = to.as_os_str().to_owned();
+    partial.push(".part");
+    let partial = PathBuf::from(partial);
+    if let Err(error) = std::fs::copy(fit, &partial).and_then(|_| std::fs::rename(&partial, to)) {
+        let _ = std::fs::remove_file(&partial);
+        return Err(error.into());
+    }
+    Ok(())
+}
+
+/// A file name for exporting the ride titled `title` (R50): the title with what Windows,
+/// macOS or Linux reject in a file name dropped, and `.fit`. The FIT format has no field
+/// for an activity name, so the file name is where it travels.
+#[must_use]
+pub fn export_file_name(title: &str) -> String {
+    let cleaned: String = title
+        .chars()
+        .map(|c| {
+            if c.is_control() || matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') {
+                ' '
+            } else {
+                c
+            }
+        })
+        .collect();
+    let words = cleaned.split_whitespace().collect::<Vec<_>>().join(" ");
+    // Windows drops trailing dots; a leading one hides the file on macOS and Linux.
+    let stem = words.trim_matches(|c: char| c == '.' || c.is_whitespace());
+    format!("{}.fit", if stem.is_empty() { "ride" } else { stem })
+}
+
 /// The FIT files in `dir`, newest first (file names start with the UTC start time).
 #[must_use]
 pub fn fit_files(dir: &Path) -> Vec<PathBuf> {
@@ -347,6 +386,61 @@ mod tests {
 
         assert!(matches!(load(&fit), Err(RideError::NewerFormat(99))));
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn exports_an_exact_copy_and_replaces_an_older_export() {
+        let dir = temp_dir("export");
+        let fit = dir.join("torqa-20261003-071500.fit");
+        std::fs::write(&fit, b"FIT activity").unwrap();
+        let to = dir.join("Morning loop.fit");
+        std::fs::write(&to, b"an older export, longer than the ride").unwrap();
+
+        export(&fit, &to).unwrap();
+
+        assert_eq!(std::fs::read(&to).unwrap(), b"FIT activity");
+        assert_eq!(std::fs::read(&fit).unwrap(), b"FIT activity");
+        assert!(!dir.join("Morning loop.fit.part").exists());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn exporting_onto_the_ride_itself_keeps_it() {
+        let dir = temp_dir("export-self");
+        let fit = dir.join("a.fit");
+        std::fs::write(&fit, b"FIT activity").unwrap();
+
+        export(&fit, &fit).unwrap();
+
+        assert_eq!(std::fs::read(&fit).unwrap(), b"FIT activity");
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn a_failed_export_leaves_nothing_behind() {
+        let dir = temp_dir("export-missing");
+
+        assert!(matches!(
+            export(&dir.join("gone.fit"), &dir.join("out.fit")),
+            Err(RideError::Io(_))
+        ));
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn export_file_names_keep_the_title_and_are_valid_everywhere() {
+        assert_eq!(export_file_name("Morning loop"), "Morning loop.fit");
+        assert_eq!(
+            export_file_name("Gurtenstrasse · Sat 3 Oct"),
+            "Gurtenstrasse · Sat 3 Oct.fit"
+        );
+        assert_eq!(
+            export_file_name("Intervals: 4/4 <hard>?"),
+            "Intervals 4 4 hard.fit"
+        );
+        assert_eq!(export_file_name(" .hidden\tride... "), "hidden ride.fit");
+        assert_eq!(export_file_name("??"), "ride.fit");
     }
 
     #[test]

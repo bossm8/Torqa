@@ -20,6 +20,10 @@ The history shows:
 - **Time in zones**: power zones from your FTP, heart-rate zones from your maximum heart rate
   (see [riders.md](riders.md)). Sections without data, e.g. no heart-rate strap, are hidden.
 - The bin beside the title (**Delete ride**) removes the FIT file and its summary, after asking.
+- The arrow beside the title (**Export FIT file**) saves a copy of the ride's FIT file wherever
+  you choose on your computer, e.g. to upload it to Strava, intervals.icu or Garmin Connect by
+  hand. The file is named after the ride, as FIT files have no field for an activity name;
+  the ride stays in the history. Export also works on the summary right after a ride.
 
 Normalized power needs at least 30 s of power data. Intensity and TSS use the FTP the rider had
 when the ride was saved, so they do not change when you update your FTP later; time in zones

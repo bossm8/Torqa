@@ -1215,3 +1215,15 @@ msgstr "Der einzige Fahrer kann nicht gelöscht werden"
 
 msgid "“%s” and all their rides are deleted."
 msgstr "«%s» und alle zugehörigen Fahrten werden gelöscht."
+
+msgid "Export FIT file"
+msgstr "FIT-Datei exportieren"
+
+msgid "Export the ride as a FIT file"
+msgstr "Fahrt als FIT-Datei exportieren"
+
+msgid "FIT activities"
+msgstr "FIT-Aktivitäten"
+
+msgid "Saved as %s"
+msgstr "Gespeichert als %s"
