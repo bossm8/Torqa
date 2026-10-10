@@ -60,6 +60,7 @@ func _init() -> void:
 	_dialog.profile_confirmed.connect(_on_profile_confirmed)
 	_confirm_delete.title = tr("Delete rider?")
 	_confirm_delete.ok_button_text = tr("Delete")
+	UiTheme.danger_button(_confirm_delete.get_ok_button())
 	# The text holds the rider's name, which is never translated.
 	_confirm_delete.get_label().auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	_confirm_delete.confirmed.connect(_delete)
@@ -141,6 +142,7 @@ func _card(rider: Dictionary, active: bool, deletable: bool) -> PanelContainer:
 	delete.focus_mode = Control.FOCUS_NONE
 	delete.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	delete.pressed.connect(_ask_delete.bind(id, rider_name))
+	UiTheme.danger_button(delete)
 	line.add_child(delete)
 	var unfolded: bool = _unfolded.get(id, false)
 	var fold: Button = Button.new()

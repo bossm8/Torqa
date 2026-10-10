@@ -7,6 +7,8 @@ const TEXT: Color = Color(0.94, 0.95, 0.97)
 const MUTED: Color = Color(0.64, 0.68, 0.74)
 const PANEL: Color = Color(0.06, 0.07, 0.09, 0.72)
 const SURFACE: Color = Color(1, 1, 1, 0.07)
+## Actions that delete something.
+const DANGER: Color = Color(0.93, 0.33, 0.36)
 const RADIUS: int = 14
 # i18n-begin: zone and climb names are shown translated.
 ## Power zones 1–7 (Coggan): name and colour, as commonly used by training platforms.
@@ -149,6 +151,22 @@ static func panel(alpha: float = PANEL.a) -> StyleBoxFlat:
 ## The main action of a screen (e.g. Ride), in the accent colour.
 static func accent_button() -> StyleBoxFlat:
 	return _box(ACCENT, 12, 18, 10)
+
+
+## Marks `button` as deleting something: tinted red with light red text and icon, solid red
+## when pressed. Disabled, it looks like any other disabled button. The boxes keep the
+## theme's margins so the button stays the size of its neighbours.
+static func danger_button(button: Button) -> void:
+	button.add_theme_stylebox_override("normal", _button_box(Color(DANGER, 0.2)))
+	button.add_theme_stylebox_override("hover", _button_box(Color(DANGER, 0.34)))
+	button.add_theme_stylebox_override("pressed", _button_box(Color(DANGER, 0.85)))
+	var light: Color = DANGER.lightened(0.45)
+	# Dialogs focus their OK button, which then draws in the focus colours.
+	for state: String in ["font_color", "font_focus_color", "font_hover_color"]:
+		button.add_theme_color_override(state, light)
+	# Icons are drawn near-white and tinted by these.
+	for state: String in ["icon_normal_color", "icon_focus_color", "icon_hover_color"]:
+		button.add_theme_color_override(state, light)
 
 
 ## A button background for use over the 3D scene, as dark as the HUD panels.

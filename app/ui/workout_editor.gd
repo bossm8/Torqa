@@ -179,12 +179,14 @@ func _ready() -> void:
 	add_child(rows)
 
 	_delete_button = add_button(tr("Delete"), true, "delete")
+	UiTheme.danger_button(_delete_button)
 	custom_action.connect(_on_action)
 	confirmed.connect(_save)
 	_confirm_delete.theme = theme
 	_confirm_delete.title = tr("Delete workout?")
 	_confirm_delete.dialog_text = tr("Its file is deleted from your workouts.")
 	_confirm_delete.ok_button_text = tr("Delete")
+	UiTheme.danger_button(_confirm_delete.get_ok_button())
 	_confirm_delete.confirmed.connect(_delete)
 	add_child(_confirm_delete)
 
