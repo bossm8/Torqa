@@ -1197,3 +1197,9 @@ msgstr "Als dieser Fahrer fahren"
 
 msgid "Active"
 msgstr "Aktiv"
+
+msgid "Default"
+msgstr "Standard"
+
+msgid "Custom"
+msgstr "Angepasst"

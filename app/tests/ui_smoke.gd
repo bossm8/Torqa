@@ -622,7 +622,8 @@ func _summary_icons() -> void:
 
 
 ## The Profile tab lists the riders as cards (#191, #194): the active one marked, the others
-## with a way to use them, each unfolding to the whole setup in two columns.
+## with a way to use them, each unfolding to the whole setup in three columns: the settings
+## (the HUD only as default or custom), the power zones and the heart-rate zones.
 func _profile_icons() -> void:
 	var tab: ProfileTab = ProfileTab.new()
 	# The app's theme, for the sizes the cards really get.
@@ -676,8 +677,25 @@ func _profile_icons() -> void:
 	for label: Node in cards.find_children("*", "Label", true, false):
 		rows.append((label as Label).text)
 	_check(
-		grids.size() == 1 and "Deutsch" in rows and "46 T" in rows and "Z7 Neuromuscular" in rows,
-		"unfolded: every setting and the zones: %s" % [rows]
+		grids.size() == 1 and "Deutsch" in rows and "46 T" in rows and "Default" in rows,
+		"unfolded: every setting, the HUD as default or custom: %s" % [rows]
+	)
+	var columns: Array[Node] = grids[0].get_parent().get_children()
+	var zones: Array[String] = []
+	for column: Node in columns.slice(1):
+		var names: Array[String] = []
+		for label: Node in column.find_children("*", "Label", true, false):
+			names.append((label as Label).text)
+		zones.append(" | ".join(names))
+	_check(
+		(
+			zones.size() == 2
+			and zones[0].containsn("Power zones")
+			and "Z7 Neuromuscular" in zones[0]
+			and zones[1].containsn("Heart-rate zones")
+			and "Z5 Maximum" in zones[1]
+		),
+		"settings, power zones and heart-rate zones side by side: %s" % [zones]
 	)
 	tab.free()
 

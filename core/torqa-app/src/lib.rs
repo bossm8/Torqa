@@ -1913,7 +1913,13 @@ impl App {
     /// The active rider's HUD metrics, in order (R23); the first is shown large.
     #[must_use]
     pub fn hud_layout(&self) -> Vec<String> {
-        hud::sanitize(&profiles::load_hud(&self.data_dir, &self.profile.id).unwrap_or_default())
+        self.hud_layout_of(&self.profile.id)
+    }
+
+    /// Any rider's HUD metrics, in order: the default layout for one who never chose any.
+    #[must_use]
+    pub fn hud_layout_of(&self, id: &str) -> Vec<String> {
+        hud::sanitize(&profiles::load_hud(&self.data_dir, id).unwrap_or_default())
     }
 
     /// Saves the active rider's HUD metrics; unknown or repeated ones are dropped. Returns the
@@ -4213,8 +4219,12 @@ mod tests {
 
         assert_eq!(saved, ["power_3s"]);
         assert_eq!(app.hud_layout(), ["power_3s"]);
-        app.save_profile(None, Profile::default()).unwrap();
+        let first = app.profile().id.clone();
+        let second = app.save_profile(None, Profile::default()).unwrap();
         assert_eq!(app.hud_layout(), hud::DEFAULT_LAYOUT);
+        // The Profile tab shows every rider's layout, not only the active one's.
+        assert_eq!(app.hud_layout_of(&first), ["power_3s"]);
+        assert_eq!(app.hud_layout_of(&second), hud::DEFAULT_LAYOUT);
     }
 
     #[test]

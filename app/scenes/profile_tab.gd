@@ -1,7 +1,8 @@
 class_name ProfileTab
 extends VBoxContainer
 ## The riders (R22): one card per rider, the active one marked, each a line of key figures
-## that unfolds to the rider's whole setup in two columns, figures and zones (#191, #194).
+## that unfolds to the rider's whole setup in three columns: settings, power zones and
+## heart-rate zones (#191, #194).
 ## Switching riders also switches the interface language (R24).
 
 ## The active rider changed (figures, units, language or HUD).
@@ -147,11 +148,7 @@ func _card(rider: Dictionary, active: bool) -> PanelContainer:
 			value.text = tr(text)
 			settings.add_child(value)
 		columns.add_child(settings)
-		var zones: VBoxContainer = VBoxContainer.new()
-		zones.add_theme_constant_override("separation", 6)
-		zones.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_show_zones(zones, rider)
-		columns.add_child(zones)
+		_show_zones(columns, rider)
 		rows.add_child(columns)
 	return card
 
@@ -169,7 +166,8 @@ func _key_figures(rider: Dictionary) -> String:
 	)
 
 
-## Everything the dialog has, as `[caption, value]` rows (#194).
+## Everything the dialog has, as `[caption, value]` rows (#194); the HUD only as default or
+## custom, its metrics would make the column far too long.
 func _setting_rows(rider: Dictionary) -> Array[Array]:
 	var imperial: bool = rider.get("units", "metric") == "imperial"
 	var weight: float = rider.get("rider_mass_kg", 0.0)
@@ -186,18 +184,11 @@ func _setting_rows(rider: Dictionary) -> Array[Array]:
 		if code == chosen and not code.is_empty():
 			language = language_name
 	var single_cog: bool = rider.get("drivetrain", "cassette") == "single_cog"
-	var captions: Dictionary[String, String] = {}
-	for metric: Dictionary in TorqaApp.hud_metrics():
-		var metric_id: String = metric["id"]
-		var caption: String = metric["caption"]
-		captions[metric_id] = tr(caption)
-	var hud: PackedStringArray = PackedStringArray()
-	var layout: PackedStringArray = (
-		_torqa.hud_layout() if _torqa != null else TorqaApp.hud_default_layout()
+	var id: String = rider.get("id", "")
+	var hud: PackedStringArray = (
+		_torqa.hud_layout_of(id) if _torqa != null else TorqaApp.hud_default_layout()
 	)
-	for metric_id: String in layout:
-		var shown: String = captions.get(metric_id, metric_id)
-		hud.append(shown)
+	var custom_hud: bool = hud != TorqaApp.hud_default_layout()
 	var difficulty: float = rider.get("default_difficulty_pct", 50.0)
 	# i18n-begin
 	var rows: Array[Array] = [
@@ -219,14 +210,17 @@ func _setting_rows(rider: Dictionary) -> Array[Array]:
 		var cog: int = rider.get("cog", 14)
 		rows.append(["Chainring", "%d T" % chainring])
 		rows.append(["Cog", "%d T" % cog])
-	rows.append(["HUD", " · ".join(hud)])
+	# i18n-begin
+	rows.append(["HUD", "Custom" if custom_hud else "Default"])
+	# i18n-end
 	rows.append(["Trainer difficulty", "%d %%" % roundi(difficulty)])
 	return rows
 
 
-## The rider's zones (#173) into `into`, each with its colour, name and range: power zones
-## 1–7 from the bounds as shares of FTP, heart-rate zones 1–5 from the maximum heart rate.
-func _show_zones(into: VBoxContainer, rider: Dictionary) -> void:
+## The rider's zones (#173) as a column each in `columns`, every zone with its colour, name
+## and range: power zones 1–7 from the bounds as shares of FTP, heart-rate zones 1–5 from the
+## maximum heart rate.
+func _show_zones(columns: HBoxContainer, rider: Dictionary) -> void:
 	var ftp: float = rider.get("ftp_w", 200.0)
 	var max_hr: float = rider.get("max_heart_rate_bpm", 185.0)
 	var power: PackedFloat64Array = rider.get("power_zones_pct", ZonesEditor.DEFAULT_POWER)
@@ -235,22 +229,33 @@ func _show_zones(into: VBoxContainer, rider: Dictionary) -> void:
 		power = ZonesEditor.DEFAULT_POWER
 	if heart.size() != ZonesEditor.DEFAULT_HEART.size():
 		heart = ZonesEditor.DEFAULT_HEART
-	into.add_child(UiTheme.caption(tr("Power zones")))
-	_zone_rows(into, UiTheme.POWER_ZONES, power, 0.0, ftp, "W")
-	into.add_child(UiTheme.caption(tr("Heart-rate zones")))
-	_zone_rows(into, UiTheme.HEART_RATE_ZONES, heart, ZonesEditor.HEART_FLOOR_PCT, max_hr, "bpm")
+	columns.add_child(_zone_column(tr("Power zones"), UiTheme.POWER_ZONES, power, 0.0, ftp, "W"))
+	columns.add_child(
+		_zone_column(
+			tr("Heart-rate zones"),
+			UiTheme.HEART_RATE_ZONES,
+			heart,
+			ZonesEditor.HEART_FLOOR_PCT,
+			max_hr,
+			"bpm"
+		)
+	)
 
 
-## A row per zone: `bounds` are the tops of all but the last zone in percent of `base`; the
-## first zone starts at `floor_pct`, the last one is open at the top.
-func _zone_rows(
-	into: VBoxContainer,
+## A caption over a row per zone: `bounds` are the tops of all but the last zone in percent
+## of `base`; the first zone starts at `floor_pct`, the last one is open at the top.
+func _zone_column(
+	caption: String,
 	zones: Array[Array],
 	bounds: PackedFloat64Array,
 	floor_pct: float,
 	base: float,
 	unit: String
-) -> void:
+) -> VBoxContainer:
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(UiTheme.caption(caption))
 	var low_pct: float = floor_pct
 	for i: int in range(zones.size()):
 		var zone_name: String = zones[i][0]
@@ -286,7 +291,8 @@ func _zone_rows(
 				"%d+ %s  ·  %d+ %%" % [roundi(base * low_pct / 100.0), unit, roundi(low_pct)]
 			)
 		row.add_child(range_label)
-		into.add_child(row)
+		column.add_child(row)
+	return column
 
 
 func _toggle(id: String) -> void:
