@@ -2,8 +2,8 @@ class_name ProfileTab
 extends VBoxContainer
 ## The riders (R22): one card per rider, the active one marked, each a line of key figures
 ## that unfolds to the rider's whole setup in three columns: settings, power zones and
-## heart-rate zones (#191, #194).
-## Switching riders also switches the interface language (R24).
+## heart-rate zones (#191, #194). Riders can be deleted, all but the last. Switching riders
+## also switches the interface language (R24).
 
 ## The active rider changed (figures, units, language or HUD).
 signal profile_changed
@@ -12,6 +12,9 @@ var _torqa: TorqaApp
 var _cards: VBoxContainer = VBoxContainer.new()
 var _add_button: Button = Button.new()
 var _dialog: ProfileDialog = ProfileDialog.new()
+var _confirm_delete: ConfirmationDialog = ConfirmationDialog.new()
+## The rider the confirmation asks about.
+var _deleting: String = ""
 ## The riders unfolded, by id; kept across refreshes.
 var _unfolded: Dictionary[String, bool] = {}
 
@@ -55,6 +58,12 @@ func _init() -> void:
 	add_child(_cards)
 	add_child(_dialog)
 	_dialog.profile_confirmed.connect(_on_profile_confirmed)
+	_confirm_delete.title = tr("Delete rider?")
+	_confirm_delete.ok_button_text = tr("Delete")
+	# The text holds the rider's name, which is never translated.
+	_confirm_delete.get_label().auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_confirm_delete.confirmed.connect(_delete)
+	add_child(_confirm_delete)
 
 
 ## Builds a card per rider (dictionaries as `TorqaApp.profile()` gives them).
@@ -64,12 +73,12 @@ func _show_riders(riders: Array, active_id: String) -> void:
 		child.free()
 	for rider: Dictionary in riders:
 		var id: String = rider.get("id", "")
-		_cards.add_child(_card(rider, id == active_id))
+		_cards.add_child(_card(rider, id == active_id, riders.size() > 1))
 
 
-## One rider: badge, name and key figures on a line, the way to use or edit them, and the
-## whole setup under it when unfolded.
-func _card(rider: Dictionary, active: bool) -> PanelContainer:
+## One rider: badge, name and key figures on a line, the way to use, edit or delete them,
+## and the whole setup under it when unfolded.
+func _card(rider: Dictionary, active: bool, deletable: bool) -> PanelContainer:
 	var id: String = rider.get("id", "")
 	var card: PanelContainer = PanelContainer.new()
 	var box: StyleBoxFlat = UiTheme.panel()
@@ -122,6 +131,17 @@ func _card(rider: Dictionary, active: bool) -> PanelContainer:
 	edit.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	edit.pressed.connect(_edit.bind(id))
 	line.add_child(edit)
+	var delete: Button = Button.new()
+	delete.icon = UiIcons.texture("bin")
+	# There is always a rider to ride as.
+	delete.disabled = not deletable
+	delete.tooltip_text = (
+		tr("Delete rider") if deletable else tr("The only rider cannot be deleted")
+	)
+	delete.focus_mode = Control.FOCUS_NONE
+	delete.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	delete.pressed.connect(_ask_delete.bind(id, rider_name))
+	line.add_child(delete)
 	var unfolded: bool = _unfolded.get(id, false)
 	var fold: Button = Button.new()
 	fold.icon = UiIcons.texture("up" if unfolded else "down")
@@ -315,6 +335,22 @@ func _edit(id: String) -> void:
 		refresh()
 		profile_changed.emit()
 	_dialog.edit(_torqa.profile(), _torqa.hud_layout())
+
+
+func _ask_delete(id: String, rider_name: String) -> void:
+	_deleting = id
+	_confirm_delete.dialog_text = tr("“%s” and all their rides are deleted.") % rider_name
+	_confirm_delete.popup_centered()
+
+
+func _delete() -> void:
+	var was_active: bool = _deleting == _torqa.profile().get("id", "")
+	if not _torqa.delete_profile(_deleting):
+		return
+	_unfolded.erase(_deleting)
+	refresh()
+	if was_active:
+		profile_changed.emit()
 
 
 func _on_profile_confirmed(id: String, profile: Dictionary, hud_layout: PackedStringArray) -> void:

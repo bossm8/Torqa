@@ -82,6 +82,9 @@ pub enum AppError {
     /// No profile with that id.
     #[error("unknown profile")]
     UnknownProfile,
+    /// The app always has a rider, so the only one cannot be deleted.
+    #[error("the only rider cannot be deleted")]
+    LastProfile,
     /// Reading or writing a file in the data directory failed.
     #[error("{0}")]
     Storage(String),
@@ -544,6 +547,28 @@ impl App {
             profile,
         };
         Ok(id)
+    }
+
+    /// Deletes a rider with their rides; deleting the active one switches to the first rider
+    /// left.
+    ///
+    /// # Errors
+    /// [`AppError::LastProfile`] for the only rider, [`AppError::UnknownProfile`] if there is no
+    /// such rider, [`AppError::Storage`] if it cannot be removed.
+    pub fn delete_profile(&mut self, id: &str) -> Result<(), AppError> {
+        let listed = profiles::list(&self.data_dir);
+        if !listed.iter().any(|p| p.id == id) {
+            return Err(AppError::UnknownProfile);
+        }
+        let Some(next) = listed.into_iter().find(|p| p.id != id) else {
+            return Err(AppError::LastProfile);
+        };
+        profiles::delete(&self.data_dir, id)
+            .map_err(|e| AppError::Storage(format!("cannot delete profile: {e}")))?;
+        if self.profile.id == id {
+            self.select_profile(&next.id)?;
+        }
+        Ok(())
     }
 
     /// Scans for trainers and heart-rate sensors; reports [`AppEvent::DevicesFound`].
@@ -2992,6 +3017,38 @@ mod tests {
         );
         app.set_ftp(Watts(150.0)).unwrap();
         assert_eq!(app.profile().profile.ftp, Watts(150.0));
+        app.shutdown();
+    }
+
+    #[test]
+    fn deleting_the_active_rider_switches_to_one_left_but_the_last_one_stays() {
+        let dir = temp_dir("delete-rider");
+        let mut app = App::new(dir.join("data"), dir.join("cache")).unwrap();
+        let first = app.profile().id.clone();
+        let anna = app
+            .save_profile(
+                None,
+                Profile {
+                    name: "Anna".to_owned(),
+                    ..Profile::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(app.profile().id, anna);
+
+        app.delete_profile(&anna).unwrap();
+
+        assert_eq!(app.profile().id, first);
+        assert_eq!(profiles::active(&dir.join("data")), Some(first.clone()));
+        assert!(matches!(
+            app.delete_profile(&anna),
+            Err(AppError::UnknownProfile)
+        ));
+        assert!(matches!(
+            app.delete_profile(&first),
+            Err(AppError::LastProfile)
+        ));
+        assert_eq!(app.profiles().len(), 1);
         app.shutdown();
     }
 

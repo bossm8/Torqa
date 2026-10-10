@@ -26,6 +26,9 @@ pub enum ProfileError {
     /// Serialising failed (cannot happen for profiles, but the encoder is fallible).
     #[error("cannot write profile: {0}")]
     Serialize(#[from] toml::ser::Error),
+    /// The id is not the name of a directory under `profiles/`.
+    #[error("invalid profile id {0:?}")]
+    InvalidId(String),
 }
 
 /// A profile and the directory name that identifies it.
@@ -405,6 +408,23 @@ pub fn load(data_dir: &Path, id: &str) -> Result<Profile, ProfileError> {
 pub fn save(data_dir: &Path, id: &str, profile: &Profile) -> Result<(), ProfileError> {
     let text = toml::to_string_pretty(&ProfileFile::from(profile))?;
     write_atomically(&profile_dir(data_dir, id).join(PROFILE_FILE), &text)
+}
+
+/// Deletes a rider with everything in their directory: profile, HUD layout and rides.
+///
+/// # Errors
+/// [`ProfileError::InvalidId`] unless `id` is a plain directory name, so nothing outside
+/// `profiles/` can be removed; otherwise on file system errors.
+pub fn delete(data_dir: &Path, id: &str) -> Result<(), ProfileError> {
+    let mut parts = Path::new(id).components();
+    if !matches!(
+        (parts.next(), parts.next()),
+        (Some(std::path::Component::Normal(_)), None)
+    ) {
+        return Err(ProfileError::InvalidId(id.to_owned()));
+    }
+    std::fs::remove_dir_all(profile_dir(data_dir, id))?;
+    Ok(())
 }
 
 /// A new, unused profile id derived from `name`.
@@ -831,6 +851,41 @@ mod tests {
         assert_eq!(new_id(&data, "Marco"), "marco-2");
         assert_eq!(new_id(&data, "Anna B."), "anna-b");
         assert_eq!(new_id(&data, "!!"), "rider");
+        std::fs::remove_dir_all(data).unwrap();
+    }
+
+    #[test]
+    fn deleting_a_rider_removes_their_rides_and_nobody_else() {
+        let data = temp_dir("delete");
+        save(&data, "anna", &Profile::default()).unwrap();
+        save_hud(&data, "anna", &["speed".to_owned()]).unwrap();
+        std::fs::create_dir_all(rides_dir(&data, "anna")).unwrap();
+        std::fs::write(rides_dir(&data, "anna").join("ride.fit"), b"fit").unwrap();
+        save(&data, "zoe", &Profile::default()).unwrap();
+
+        delete(&data, "anna").unwrap();
+
+        assert!(!profile_dir(&data, "anna").exists());
+        assert_eq!(
+            list(&data).into_iter().map(|p| p.id).collect::<Vec<_>>(),
+            ["zoe"]
+        );
+        std::fs::remove_dir_all(data).unwrap();
+    }
+
+    #[test]
+    fn only_a_rider_directory_can_be_deleted() {
+        let data = temp_dir("delete-outside");
+        save(&data, "anna", &Profile::default()).unwrap();
+
+        for id in ["", ".", "..", "../profiles", "anna/rides", "/tmp"] {
+            assert!(
+                matches!(delete(&data, id), Err(ProfileError::InvalidId(_))),
+                "{id:?}"
+            );
+        }
+
+        assert!(data.join(PROFILES).join("anna").join(PROFILE_FILE).exists());
         std::fs::remove_dir_all(data).unwrap();
     }
 

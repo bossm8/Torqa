@@ -1203,3 +1203,15 @@ msgstr "Standard"
 
 msgid "Custom"
 msgstr "Angepasst"
+
+msgid "Delete rider"
+msgstr "Fahrer löschen"
+
+msgid "Delete rider?"
+msgstr "Fahrer löschen?"
+
+msgid "The only rider cannot be deleted"
+msgstr "Der einzige Fahrer kann nicht gelöscht werden"
+
+msgid "“%s” and all their rides are deleted."
+msgstr "«%s» und alle zugehörigen Fahrten werden gelöscht."

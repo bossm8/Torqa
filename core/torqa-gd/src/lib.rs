@@ -1230,6 +1230,14 @@ impl TorqaApp {
         selected
     }
 
+    /// Deletes a rider with their rides (emits `failed` for the only rider); deleting the
+    /// active one switches to another.
+    #[func]
+    #[allow(clippy::needless_pass_by_value)] // #[func] parameters are passed by value from Godot
+    fn delete_profile(&mut self, id: GString) -> bool {
+        self.command(|app| app.delete_profile(&id.to_string()))
+    }
+
     /// Saves a rider (a new one if `id` is empty) from a dictionary shaped like `profile()`
     /// and makes it active; returns its id, or an empty string on failure (emits `failed`).
     #[func]
