@@ -212,6 +212,8 @@ Built in rideable steps:
   - [x] The summary's rename and delete as icon buttons (#190); buttons that delete are red
   - [x] The Profile tab and dialog: the rider as a heading, cards unfolding to every setting
     and the zones (#191, #194)
+  - [x] The course page's title line like a ride's: a pencil for Edit course (name, video), a
+    bin to delete it
 - **Exit:** start the app, pick a course from the gallery, ride it, see the summary, land back home
 
 ### Phase 9 — Graphics (R43–R47, [ADR 0009](adr/0009-asset-pipeline.md), [ADR 0011](adr/0011-stylized-look.md))
