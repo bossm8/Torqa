@@ -707,7 +707,27 @@ func _profile_icons() -> void:
 		),
 		"settings, power zones and heart-rate zones side by side: %s" % [zones]
 	)
+	var bins: Array[Button] = _bins(cards)
+	_check(bins.size() == 2 and not bins[0].disabled, "a bin on every card")
+	bins[0].pressed.emit()
+	var confirm: ConfirmationDialog = tab.get("_confirm_delete")
+	_check(
+		confirm.visible and "Ann" in confirm.dialog_text,
+		"deleting a rider asks first: %s" % confirm.dialog_text
+	)
+	confirm.hide()
+	tab.call("_show_riders", [bob], "bob")
+	bins = _bins(cards)
+	_check(bins.size() == 1 and bins[0].disabled, "the only rider cannot be deleted")
 	tab.free()
+
+
+func _bins(cards: Node) -> Array[Button]:
+	var bins: Array[Button] = []
+	for button: Node in cards.find_children("*", "Button", true, false):
+		if (button as Button).icon == UiIcons.texture("bin"):
+			bins.append(button)
+	return bins
 
 
 ## A course's card shows its map under the route once it has one (#192).

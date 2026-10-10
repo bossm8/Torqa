@@ -15,7 +15,7 @@ Torqa opens on the start page with five tabs:
 - **Workouts** — hold a power, or a heart rate that Torqa holds for you by setting the power,
   on its own or on a course in 3D ([workouts.md](workouts.md)).
 - **History** — your rides ([history.md](history.md)).
-- **Profile** — who rides, their figures, editing them and their HUD, new riders
+- **Profile** — who rides, their figures, editing them and their HUD, adding and deleting riders
   ([riders.md](riders.md), [hud.md](hud.md)).
 - **Devices & Settings** — trainer and heart-rate strap; the ones used last reconnect by
   themselves ([riding.md](riding.md)).
