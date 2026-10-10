@@ -575,6 +575,16 @@ func _ride_bar() -> void:
 			button.icon != null and not button.tooltip_text.is_empty(),
 			"an icon with a tooltip: %s" % button.tooltip_text
 		)
+		# The button is laid out with its normal box; another inset on hover pushed the icon
+		# onto its neighbour.
+		var inset: Vector2 = button.get_theme_stylebox("normal").get_minimum_size()
+		_check(
+			(
+				button.get_theme_stylebox("hover").get_minimum_size() == inset
+				and button.get_theme_stylebox("pressed").get_minimum_size() == inset
+			),
+			"the icon stays in place on hover and press: %s" % button.tooltip_text
+		)
 	_check(UiIcons.texture("cog").get_width() == RideBar.ICON, "icons drawn at their size")
 	var folds: Array[bool] = []
 	bar.folded_changed.connect(func(folded: bool) -> void: folds.append(folded))
