@@ -139,8 +139,8 @@ Built in rideable steps:
 - [x] Distance↔video-time sync; video courses (`.tqc` referencing the video)
 - [x] Import Incyclist route videos (`.xml` + GPX + video, e.g. the free Van Gestel library)
 - [x] Video ride view: playback following the rider's speed, frame blending, HUD on top
-- [x] Videos without GPS added to a GPX course ("Add video…" on the course page): route start
-  and end marks in the video with frame previews; movable or removable later
+- [x] Videos without GPS added to a GPX course ("Add video…" in the course page's Edit course
+  dialog): route start and end marks in the video with frame previews; movable or removable later
 - [x] More sync points between start and end (stops, speed changes in the footage)
 - [ ] Hardware decoding (VideoToolbox); transcode above 1080p on import; Insta360 GPS
 - [x] Video courses ridden along the video or in 3D, chosen when riding (#44); videos can be
@@ -182,7 +182,8 @@ Built in rideable steps:
 - [ ] Auto-rendered course screenshots at build time, cover selection, stored in the `.tqc`
   (ADR 0007 format bump); frames from the video for video courses
 - [x] Courses gallery (cards with stats and small map) and course detail page with ride options;
-  courses renamed and deleted there, 3D world built only when riding
+  courses renamed (the pencil's Edit course dialog, with their video) and deleted (the bin)
+  there, 3D world built only when riding
 - [x] Ride summary screen after the ride (name, keep or discard), then back home (R42)
 - [x] Auto-reconnect last-used devices (R41)
 - [x] In-ride settings dialog (camera, difficulty, descents, time of day, weather, HUD) from

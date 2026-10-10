@@ -609,8 +609,14 @@ msgid "← Courses"
 msgstr "← Strecken"
 
 
-msgid "Rename the course"
-msgstr "Strecke umbenennen"
+msgid "Edit the course's name and video"
+msgstr "Name und Video der Strecke bearbeiten"
+
+msgid "Edit course"
+msgstr "Strecke bearbeiten"
+
+msgid "None: ridden in the 3D world"
+msgstr "Keines: Du fährst in der 3D-Welt"
 
 msgid "Delete course"
 msgstr "Strecke löschen"
@@ -667,8 +673,8 @@ msgstr "1. Importiere die GPX-Route der Fahrt im Video."
 msgid "%s has no GPS, so it cannot become a course by itself."
 msgstr "%s hat kein GPS und kann darum nicht allein zur Strecke werden."
 
-msgid "3. Press Add video…, choose the video and set where the route starts and ends."
-msgstr "3. Drücke «Video hinzufügen …», wähle das Video und lege fest, wo die Route beginnt und endet."
+msgid "3. Press the pencil beside its name, then Add video…, and place the route in the video."
+msgstr "3. Drücke den Stift neben ihrem Namen, dann «Video hinzufügen …», und richte die Route am Video aus."
 
 msgid "2. Open that course."
 msgstr "2. Öffne diese Strecke."

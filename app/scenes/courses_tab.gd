@@ -207,7 +207,9 @@ func no_gps_steps(file: String) -> String:
 		tr("%s has no GPS, so it cannot become a course by itself.") % file,
 		tr("1. Import the GPX route of the ride shown in the video."),
 		tr("2. Open that course."),
-		tr("3. Press Add video…, choose the video and set where the route starts and ends."),
+		tr(
+			"3. Press the pencil beside its name, then Add video…, and place the route in the video."
+		),
 	]
 	return "\n\n".join(steps)
 
