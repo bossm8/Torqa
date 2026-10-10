@@ -161,6 +161,12 @@ static func bar() -> StyleBoxFlat:
 	return _box(PANEL, 12, 6, 4)
 
 
+## An icon button's box: square around a 20 px icon and as tall as a text button beside it.
+## Every state needs the same margins, or the icon shifts when the box changes on hover.
+static func icon_button(color: Color) -> StyleBoxFlat:
+	return _box(color, 10, 9, 9)
+
+
 ## A list entry that can be dragged; the highlighted one marks the HUD's large figure.
 static func chip(highlighted: bool) -> StyleBoxFlat:
 	var box: StyleBoxFlat = _box(Color(ACCENT, 0.22) if highlighted else SURFACE, 8, 12, 4)

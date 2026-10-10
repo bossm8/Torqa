@@ -143,6 +143,6 @@ func _icon_button(button: Button, icon: String, tooltip: String) -> void:
 	button.icon = UiIcons.texture(icon, ICON)
 	button.tooltip_text = tooltip
 	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	button.add_theme_stylebox_override("hover", UiTheme.chip(false))
-	button.add_theme_stylebox_override("pressed", UiTheme.chip(true))
+	button.add_theme_stylebox_override("normal", UiTheme.icon_button(Color.TRANSPARENT))
+	button.add_theme_stylebox_override("hover", UiTheme.icon_button(Color(1, 1, 1, 0.13)))
+	button.add_theme_stylebox_override("pressed", UiTheme.icon_button(Color(UiTheme.ACCENT, 0.85)))
