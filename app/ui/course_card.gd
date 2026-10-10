@@ -8,6 +8,7 @@ signal pressed
 
 const WIDTH: float = 300.0
 
+var _path_card: PathCard = PathCard.new()
 var _title: Label = Label.new()
 
 
@@ -17,12 +18,11 @@ func _init(course: Dictionary, imperial: bool) -> void:
 	var rows: VBoxContainer = VBoxContainer.new()
 	rows.add_theme_constant_override("separation", 12)
 	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var path: PathCard = PathCard.new()
-	path.custom_minimum_size = Vector2(WIDTH - 32.0, 160)
-	path.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_path_card.custom_minimum_size = Vector2(WIDTH - 32.0, 160)
+	_path_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var track: PackedVector2Array = course.get("track", PackedVector2Array())
-	path.set_track(track)
-	rows.add_child(path)
+	_path_card.set_track(track)
+	rows.add_child(_path_card)
 	_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	_title.text = course["name"]
 	_title.add_theme_font_size_override("font_size", 18)
@@ -39,6 +39,11 @@ func _init(course: Dictionary, imperial: bool) -> void:
 	rows.add_child(heading)
 	rows.add_child(figure_rows(course, imperial))
 	add_child(rows)
+
+
+## Shows the course's map under its route, `png` as the app drew it (#192); empty for none.
+func set_map(png: PackedByteArray) -> void:
+	_path_card.set_map(png)
 
 
 ## A name the card's width cuts off shows in full on hover, as file managers do; one that fits

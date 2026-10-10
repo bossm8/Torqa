@@ -23,6 +23,7 @@ func _run() -> void:
 	_ride_bar()
 	await _summary_icons()
 	_profile_icons()
+	await _map_preview()
 	await _courses_tab()
 	_video_view()
 	_video_alignment()
@@ -664,6 +665,22 @@ func _profile_icons() -> void:
 		"unfolded: every setting and the zones: %s" % [rows]
 	)
 	tab.free()
+
+
+## A course's card shows its map under the route once it has one (#192).
+func _map_preview() -> void:
+	var card: PathCard = PathCard.new()
+	root.add_child(card)
+	_check(not card.has_map(), "black until a map is kept")
+	var image: Image = Image.create_empty(8, 8, false, Image.FORMAT_RGBA8)
+	image.fill(Color.SEA_GREEN)
+	card.set_map(image.save_png_to_buffer())
+	_check(card.has_map(), "the map shows")
+	card.set_map(PackedByteArray([1, 2, 3]))
+	_check(not card.has_map(), "not a picture: black again")
+	card.free()
+	var nothing: PackedByteArray = await MapPreview.capture(self, {}, PackedVector2Array())
+	_check(nothing.is_empty(), "nothing to draw, nothing kept")
 
 
 ## A click on the Courses tab while a course page covers the gallery brings it back (#188).
