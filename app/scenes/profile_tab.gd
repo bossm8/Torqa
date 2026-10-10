@@ -1,8 +1,9 @@
 class_name ProfileTab
 extends VBoxContainer
 ## The riders (R22): one card per rider, the active one marked, each a line of key figures
-## that unfolds to the rider's whole setup in two columns, figures and zones (#191, #194).
-## Switching riders also switches the interface language (R24).
+## that unfolds to the rider's whole setup in three columns: settings, power zones and
+## heart-rate zones (#191, #194). Riders can be deleted, all but the last. Switching riders
+## also switches the interface language (R24).
 
 ## The active rider changed (figures, units, language or HUD).
 signal profile_changed
@@ -11,6 +12,9 @@ var _torqa: TorqaApp
 var _cards: VBoxContainer = VBoxContainer.new()
 var _add_button: Button = Button.new()
 var _dialog: ProfileDialog = ProfileDialog.new()
+var _confirm_delete: ConfirmationDialog = ConfirmationDialog.new()
+## The rider the confirmation asks about.
+var _deleting: String = ""
 ## The riders unfolded, by id; kept across refreshes.
 var _unfolded: Dictionary[String, bool] = {}
 
@@ -54,6 +58,12 @@ func _init() -> void:
 	add_child(_cards)
 	add_child(_dialog)
 	_dialog.profile_confirmed.connect(_on_profile_confirmed)
+	_confirm_delete.title = tr("Delete rider?")
+	_confirm_delete.ok_button_text = tr("Delete")
+	# The text holds the rider's name, which is never translated.
+	_confirm_delete.get_label().auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_confirm_delete.confirmed.connect(_delete)
+	add_child(_confirm_delete)
 
 
 ## Builds a card per rider (dictionaries as `TorqaApp.profile()` gives them).
@@ -63,12 +73,12 @@ func _show_riders(riders: Array, active_id: String) -> void:
 		child.free()
 	for rider: Dictionary in riders:
 		var id: String = rider.get("id", "")
-		_cards.add_child(_card(rider, id == active_id))
+		_cards.add_child(_card(rider, id == active_id, riders.size() > 1))
 
 
-## One rider: badge, name and key figures on a line, the way to use or edit them, and the
-## whole setup under it when unfolded.
-func _card(rider: Dictionary, active: bool) -> PanelContainer:
+## One rider: badge, name and key figures on a line, the way to use, edit or delete them,
+## and the whole setup under it when unfolded.
+func _card(rider: Dictionary, active: bool, deletable: bool) -> PanelContainer:
 	var id: String = rider.get("id", "")
 	var card: PanelContainer = PanelContainer.new()
 	var box: StyleBoxFlat = UiTheme.panel()
@@ -100,11 +110,10 @@ func _card(rider: Dictionary, active: bool) -> PanelContainer:
 	line.add_child(titles)
 	if active:
 		var chip: PanelContainer = PanelContainer.new()
-		chip.add_theme_stylebox_override("panel", UiTheme.chip(true))
+		chip.add_theme_stylebox_override("panel", UiTheme.button_chip())
 		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var chip_label: Label = Label.new()
 		chip_label.text = tr("Active")
-		chip_label.add_theme_font_size_override("font_size", 12)
 		chip.add_child(chip_label)
 		line.add_child(chip)
 	else:
@@ -122,6 +131,17 @@ func _card(rider: Dictionary, active: bool) -> PanelContainer:
 	edit.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	edit.pressed.connect(_edit.bind(id))
 	line.add_child(edit)
+	var delete: Button = Button.new()
+	delete.icon = UiIcons.texture("bin")
+	# There is always a rider to ride as.
+	delete.disabled = not deletable
+	delete.tooltip_text = (
+		tr("Delete rider") if deletable else tr("The only rider cannot be deleted")
+	)
+	delete.focus_mode = Control.FOCUS_NONE
+	delete.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	delete.pressed.connect(_ask_delete.bind(id, rider_name))
+	line.add_child(delete)
 	var unfolded: bool = _unfolded.get(id, false)
 	var fold: Button = Button.new()
 	fold.icon = UiIcons.texture("up" if unfolded else "down")
@@ -148,11 +168,7 @@ func _card(rider: Dictionary, active: bool) -> PanelContainer:
 			value.text = tr(text)
 			settings.add_child(value)
 		columns.add_child(settings)
-		var zones: VBoxContainer = VBoxContainer.new()
-		zones.add_theme_constant_override("separation", 6)
-		zones.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_show_zones(zones, rider)
-		columns.add_child(zones)
+		_show_zones(columns, rider)
 		rows.add_child(columns)
 	return card
 
@@ -170,7 +186,8 @@ func _key_figures(rider: Dictionary) -> String:
 	)
 
 
-## Everything the dialog has, as `[caption, value]` rows (#194).
+## Everything the dialog has, as `[caption, value]` rows (#194); the HUD only as default or
+## custom, its metrics would make the column far too long.
 func _setting_rows(rider: Dictionary) -> Array[Array]:
 	var imperial: bool = rider.get("units", "metric") == "imperial"
 	var weight: float = rider.get("rider_mass_kg", 0.0)
@@ -187,18 +204,11 @@ func _setting_rows(rider: Dictionary) -> Array[Array]:
 		if code == chosen and not code.is_empty():
 			language = language_name
 	var single_cog: bool = rider.get("drivetrain", "cassette") == "single_cog"
-	var captions: Dictionary[String, String] = {}
-	for metric: Dictionary in TorqaApp.hud_metrics():
-		var metric_id: String = metric["id"]
-		var caption: String = metric["caption"]
-		captions[metric_id] = tr(caption)
-	var hud: PackedStringArray = PackedStringArray()
-	var layout: PackedStringArray = (
-		_torqa.hud_layout() if _torqa != null else TorqaApp.hud_default_layout()
+	var id: String = rider.get("id", "")
+	var hud: PackedStringArray = (
+		_torqa.hud_layout_of(id) if _torqa != null else TorqaApp.hud_default_layout()
 	)
-	for metric_id: String in layout:
-		var shown: String = captions.get(metric_id, metric_id)
-		hud.append(shown)
+	var custom_hud: bool = hud != TorqaApp.hud_default_layout()
 	var difficulty: float = rider.get("default_difficulty_pct", 50.0)
 	# i18n-begin
 	var rows: Array[Array] = [
@@ -220,14 +230,17 @@ func _setting_rows(rider: Dictionary) -> Array[Array]:
 		var cog: int = rider.get("cog", 14)
 		rows.append(["Chainring", "%d T" % chainring])
 		rows.append(["Cog", "%d T" % cog])
-	rows.append(["HUD", " · ".join(hud)])
+	# i18n-begin
+	rows.append(["HUD", "Custom" if custom_hud else "Default"])
+	# i18n-end
 	rows.append(["Trainer difficulty", "%d %%" % roundi(difficulty)])
 	return rows
 
 
-## The rider's zones (#173) into `into`, each with its colour, name and range: power zones
-## 1–7 from the bounds as shares of FTP, heart-rate zones 1–5 from the maximum heart rate.
-func _show_zones(into: VBoxContainer, rider: Dictionary) -> void:
+## The rider's zones (#173) as a column each in `columns`, every zone with its colour, name
+## and range: power zones 1–7 from the bounds as shares of FTP, heart-rate zones 1–5 from the
+## maximum heart rate.
+func _show_zones(columns: HBoxContainer, rider: Dictionary) -> void:
 	var ftp: float = rider.get("ftp_w", 200.0)
 	var max_hr: float = rider.get("max_heart_rate_bpm", 185.0)
 	var power: PackedFloat64Array = rider.get("power_zones_pct", ZonesEditor.DEFAULT_POWER)
@@ -236,22 +249,33 @@ func _show_zones(into: VBoxContainer, rider: Dictionary) -> void:
 		power = ZonesEditor.DEFAULT_POWER
 	if heart.size() != ZonesEditor.DEFAULT_HEART.size():
 		heart = ZonesEditor.DEFAULT_HEART
-	into.add_child(UiTheme.caption(tr("Power zones")))
-	_zone_rows(into, UiTheme.POWER_ZONES, power, 0.0, ftp, "W")
-	into.add_child(UiTheme.caption(tr("Heart-rate zones")))
-	_zone_rows(into, UiTheme.HEART_RATE_ZONES, heart, ZonesEditor.HEART_FLOOR_PCT, max_hr, "bpm")
+	columns.add_child(_zone_column(tr("Power zones"), UiTheme.POWER_ZONES, power, 0.0, ftp, "W"))
+	columns.add_child(
+		_zone_column(
+			tr("Heart-rate zones"),
+			UiTheme.HEART_RATE_ZONES,
+			heart,
+			ZonesEditor.HEART_FLOOR_PCT,
+			max_hr,
+			"bpm"
+		)
+	)
 
 
-## A row per zone: `bounds` are the tops of all but the last zone in percent of `base`; the
-## first zone starts at `floor_pct`, the last one is open at the top.
-func _zone_rows(
-	into: VBoxContainer,
+## A caption over a row per zone: `bounds` are the tops of all but the last zone in percent
+## of `base`; the first zone starts at `floor_pct`, the last one is open at the top.
+func _zone_column(
+	caption: String,
 	zones: Array[Array],
 	bounds: PackedFloat64Array,
 	floor_pct: float,
 	base: float,
 	unit: String
-) -> void:
+) -> VBoxContainer:
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(UiTheme.caption(caption))
 	var low_pct: float = floor_pct
 	for i: int in range(zones.size()):
 		var zone_name: String = zones[i][0]
@@ -287,7 +311,8 @@ func _zone_rows(
 				"%d+ %s  ·  %d+ %%" % [roundi(base * low_pct / 100.0), unit, roundi(low_pct)]
 			)
 		row.add_child(range_label)
-		into.add_child(row)
+		column.add_child(row)
+	return column
 
 
 func _toggle(id: String) -> void:
@@ -310,6 +335,22 @@ func _edit(id: String) -> void:
 		refresh()
 		profile_changed.emit()
 	_dialog.edit(_torqa.profile(), _torqa.hud_layout())
+
+
+func _ask_delete(id: String, rider_name: String) -> void:
+	_deleting = id
+	_confirm_delete.dialog_text = tr("“%s” and all their rides are deleted.") % rider_name
+	_confirm_delete.popup_centered()
+
+
+func _delete() -> void:
+	var was_active: bool = _deleting == _torqa.profile().get("id", "")
+	if not _torqa.delete_profile(_deleting):
+		return
+	_unfolded.erase(_deleting)
+	refresh()
+	if was_active:
+		profile_changed.emit()
 
 
 func _on_profile_confirmed(id: String, profile: Dictionary, hud_layout: PackedStringArray) -> void:

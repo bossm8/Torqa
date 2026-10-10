@@ -575,6 +575,16 @@ func _ride_bar() -> void:
 			button.icon != null and not button.tooltip_text.is_empty(),
 			"an icon with a tooltip: %s" % button.tooltip_text
 		)
+		# The button is laid out with its normal box; another inset on hover pushed the icon
+		# onto its neighbour.
+		var inset: Vector2 = button.get_theme_stylebox("normal").get_minimum_size()
+		_check(
+			(
+				button.get_theme_stylebox("hover").get_minimum_size() == inset
+				and button.get_theme_stylebox("pressed").get_minimum_size() == inset
+			),
+			"the icon stays in place on hover and press: %s" % button.tooltip_text
+		)
 	_check(UiIcons.texture("cog").get_width() == RideBar.ICON, "icons drawn at their size")
 	var folds: Array[bool] = []
 	bar.folded_changed.connect(func(folded: bool) -> void: folds.append(folded))
@@ -636,9 +646,12 @@ func _summary_icons() -> void:
 
 
 ## The Profile tab lists the riders as cards (#191, #194): the active one marked, the others
-## with a way to use them, each unfolding to the whole setup in two columns.
+## with a way to use them, each unfolding to the whole setup in three columns: the settings
+## (the HUD only as default or custom), the power zones and the heart-rate zones.
 func _profile_icons() -> void:
 	var tab: ProfileTab = ProfileTab.new()
+	# The app's theme, for the sizes the cards really get.
+	tab.theme = UiTheme.build()
 	root.add_child(tab)
 	var badge: PanelContainer = UiTheme.initial("  david ")
 	_check((badge.get_child(0) as Label).text == "D", "the rider's initial")
@@ -659,13 +672,26 @@ func _profile_icons() -> void:
 	var cards: VBoxContainer = tab.get("_cards")
 	_check(cards.get_child_count() == 2, "a card per rider")
 	var texts: Array[String] = []
+	var mark: Control = null
 	for label: Node in cards.find_children("*", "Label", true, false):
 		texts.append((label as Label).text)
+		if (label as Label).text == "Active":
+			mark = label.get_parent()
 	_check("Active" in texts and "Ann" in texts, "the active rider is marked: %s" % [texts])
 	var buttons: Array[String] = []
+	var use: Button = null
 	for button: Node in cards.find_children("*", "Button", true, false):
 		buttons.append((button as Button).text)
+		if (button as Button).text == "Use":
+			use = button
 	_check(buttons.count("Use") == 1, "the other rider can be used: %s" % [buttons])
+	if mark != null and use != null:
+		var mark_height: float = mark.get_combined_minimum_size().y
+		var use_height: float = use.get_combined_minimum_size().y
+		_check(
+			is_equal_approx(mark_height, use_height),
+			"the active mark is as tall as Use: %s vs %s" % [mark_height, use_height]
+		)
 	_check(cards.find_children("*", "GridContainer", true, false).is_empty(), "folded at first")
 	var unfolded: Dictionary = tab.get("_unfolded")
 	unfolded["ann"] = true
@@ -675,10 +701,47 @@ func _profile_icons() -> void:
 	for label: Node in cards.find_children("*", "Label", true, false):
 		rows.append((label as Label).text)
 	_check(
-		grids.size() == 1 and "Deutsch" in rows and "46 T" in rows and "Z7 Neuromuscular" in rows,
-		"unfolded: every setting and the zones: %s" % [rows]
+		grids.size() == 1 and "Deutsch" in rows and "46 T" in rows and "Default" in rows,
+		"unfolded: every setting, the HUD as default or custom: %s" % [rows]
 	)
+	var columns: Array[Node] = grids[0].get_parent().get_children()
+	var zones: Array[String] = []
+	for column: Node in columns.slice(1):
+		var names: Array[String] = []
+		for label: Node in column.find_children("*", "Label", true, false):
+			names.append((label as Label).text)
+		zones.append(" | ".join(names))
+	_check(
+		(
+			zones.size() == 2
+			and zones[0].containsn("Power zones")
+			and "Z7 Neuromuscular" in zones[0]
+			and zones[1].containsn("Heart-rate zones")
+			and "Z5 Maximum" in zones[1]
+		),
+		"settings, power zones and heart-rate zones side by side: %s" % [zones]
+	)
+	var bins: Array[Button] = _bins(cards)
+	_check(bins.size() == 2 and not bins[0].disabled, "a bin on every card")
+	bins[0].pressed.emit()
+	var confirm: ConfirmationDialog = tab.get("_confirm_delete")
+	_check(
+		confirm.visible and "Ann" in confirm.dialog_text,
+		"deleting a rider asks first: %s" % confirm.dialog_text
+	)
+	confirm.hide()
+	tab.call("_show_riders", [bob], "bob")
+	bins = _bins(cards)
+	_check(bins.size() == 1 and bins[0].disabled, "the only rider cannot be deleted")
 	tab.free()
+
+
+func _bins(cards: Node) -> Array[Button]:
+	var bins: Array[Button] = []
+	for button: Node in cards.find_children("*", "Button", true, false):
+		if (button as Button).icon == UiIcons.texture("bin"):
+			bins.append(button)
+	return bins
 
 
 ## A course's card shows its map under the route once it has one (#192).

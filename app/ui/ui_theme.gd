@@ -58,10 +58,10 @@ static func build() -> Theme:
 		theme.set_color("font_pressed_color", type, Color.WHITE)
 		theme.set_color("font_disabled_color", type, Color(TEXT, 0.35))
 	for type: String in ["Button", "OptionButton"]:
-		theme.set_stylebox("normal", type, _box(SURFACE, 10, 14, 9))
-		theme.set_stylebox("hover", type, _box(Color(1, 1, 1, 0.13), 10, 14, 9))
-		theme.set_stylebox("pressed", type, _box(Color(ACCENT, 0.85), 10, 14, 9))
-		theme.set_stylebox("disabled", type, _box(Color(1, 1, 1, 0.04), 10, 14, 9))
+		theme.set_stylebox("normal", type, _button_box(SURFACE))
+		theme.set_stylebox("hover", type, _button_box(Color(1, 1, 1, 0.13)))
+		theme.set_stylebox("pressed", type, _button_box(Color(ACCENT, 0.85)))
+		theme.set_stylebox("disabled", type, _button_box(Color(1, 1, 1, 0.04)))
 		theme.set_stylebox("focus", type, StyleBoxEmpty.new())
 	theme.set_stylebox("normal", "CheckBox", StyleBoxEmpty.new())
 	theme.set_stylebox("hover", "CheckBox", StyleBoxEmpty.new())
@@ -153,7 +153,7 @@ static func accent_button() -> StyleBoxFlat:
 
 ## A button background for use over the 3D scene, as dark as the HUD panels.
 static func hud_button() -> StyleBoxFlat:
-	return _box(PANEL, 10, 14, 9)
+	return _button_box(PANEL)
 
 
 ## The slim bar of icon buttons over the 3D scene (#189).
@@ -161,10 +161,24 @@ static func bar() -> StyleBoxFlat:
 	return _box(PANEL, 12, 6, 4)
 
 
+## An icon button's box: square around a 20 px icon and as tall as a text button beside it.
+## Every state needs the same margins, or the icon shifts when the box changes on hover.
+static func icon_button(color: Color) -> StyleBoxFlat:
+	return _box(color, 10, 9, 9)
+
+
 ## A list entry that can be dragged; the highlighted one marks the HUD's large figure.
 static func chip(highlighted: bool) -> StyleBoxFlat:
 	var box: StyleBoxFlat = _box(Color(ACCENT, 0.22) if highlighted else SURFACE, 8, 12, 4)
 	box.border_color = Color(ACCENT, 0.6) if highlighted else Color(1, 1, 1, 0.06)
+	box.set_border_width_all(1)
+	return box
+
+
+## A highlighted chip as large as a button, for a mark in a row of buttons (the active rider).
+static func button_chip() -> StyleBoxFlat:
+	var box: StyleBoxFlat = _button_box(Color(ACCENT, 0.22))
+	box.border_color = Color(ACCENT, 0.6)
 	box.set_border_width_all(1)
 	return box
 
@@ -214,6 +228,10 @@ static func _box(color: Color, radius: int, horizontal: int, vertical: int) -> S
 	box.content_margin_bottom = vertical
 	box.anti_aliasing = true
 	return box
+
+
+static func _button_box(color: Color) -> StyleBoxFlat:
+	return _box(color, 10, 14, 9)
 
 
 ## A time as m:ss, or h:mm:ss from an hour.

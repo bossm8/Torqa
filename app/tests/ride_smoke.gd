@@ -124,6 +124,14 @@ func _run() -> void:
 	_torqa.abort_ride()
 	_torqa.save_profile(id, rider)
 
+	# Riders can be deleted (R22); the app switches to one left.
+	var guest: String = _torqa.save_profile("", {"name": "Guest"})
+	_check(_torqa.delete_profile(guest), "a rider is deleted")
+	var active: String = _torqa.profile()["id"]
+	var gone: bool = _torqa.profiles().all(func(p: Dictionary) -> bool: return p["id"] != guest)
+	_check(gone and active != guest, "the deleted rider is gone")
+	_torqa.select_profile(id)
+
 	# Di2 buttons (#139): any press of a channel can be given an action, or none.
 	_check(_torqa.assign_button(3, 1, "next_camera"), "holding channel 3 moves the camera")
 	var buttons: Array = _torqa.button_map()

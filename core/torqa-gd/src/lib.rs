@@ -1246,6 +1246,14 @@ impl TorqaApp {
         selected
     }
 
+    /// Deletes a rider with their rides (emits `failed` for the only rider); deleting the
+    /// active one switches to another.
+    #[func]
+    #[allow(clippy::needless_pass_by_value)] // #[func] parameters are passed by value from Godot
+    fn delete_profile(&mut self, id: GString) -> bool {
+        self.command(|app| app.delete_profile(&id.to_string()))
+    }
+
     /// Saves a rider (a new one if `id` is empty) from a dictionary shaped like `profile()`
     /// and makes it active; returns its id, or an empty string on failure (emits `failed`).
     #[func]
@@ -1495,6 +1503,19 @@ impl TorqaApp {
         self.app
             .as_ref()
             .map(App::hud_layout)
+            .unwrap_or_default()
+            .iter()
+            .map(|id| GString::from(id.as_str()))
+            .collect()
+    }
+
+    /// A rider's HUD metric ids, in order, whether they are the active rider or not.
+    #[func]
+    #[allow(clippy::needless_pass_by_value)] // #[func] parameters are passed by value from Godot
+    fn hud_layout_of(&self, id: GString) -> PackedStringArray {
+        self.app
+            .as_ref()
+            .map(|app| app.hud_layout_of(&id.to_string()))
             .unwrap_or_default()
             .iter()
             .map(|id| GString::from(id.as_str()))
