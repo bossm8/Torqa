@@ -3,8 +3,9 @@
 Each rider has a profile: name, weight, bike weight, FTP, maximum heart rate and units
 (metric or imperial). The **Profile** tab lists the riders as cards, each with its key figures; the active one
 is marked, **Use** on another makes it the rider. The pencil on a card changes that rider, the
-plus at the top adds one. The chevron unfolds a card to the rider's whole setup: every setting
-the dialog has, the HUD's layout included, and the zones with their ranges beside them.
+plus at the top adds one. The chevron unfolds a card to the rider's whole setup in three
+columns: every setting the dialog has (the HUD as **Default** or **Custom**), the power zones
+and the heart-rate zones, each zone with its range.
 
 - **Weight + bike weight** set how hard climbs are and how fast you roll.
 - **FTP** sets the power zones shown under the power figure (Coggan's seven zones:

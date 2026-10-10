@@ -1485,6 +1485,19 @@ impl TorqaApp {
             .collect()
     }
 
+    /// A rider's HUD metric ids, in order, whether they are the active rider or not.
+    #[func]
+    #[allow(clippy::needless_pass_by_value)] // #[func] parameters are passed by value from Godot
+    fn hud_layout_of(&self, id: GString) -> PackedStringArray {
+        self.app
+            .as_ref()
+            .map(|app| app.hud_layout_of(&id.to_string()))
+            .unwrap_or_default()
+            .iter()
+            .map(|id| GString::from(id.as_str()))
+            .collect()
+    }
+
     /// Saves the active rider's HUD metrics and returns them as saved (unknown ids dropped).
     #[func]
     #[allow(clippy::needless_pass_by_value)] // #[func] parameters are passed by value from Godot
